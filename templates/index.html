@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>🖼️ تعديل الصور</title>
+  <style>
+    body { font-family: Arial; text-align: center; background: #f4f4f4; }
+    .preview { margin: 20px auto; }
+    img { max-width: 300px; border-radius: 10px; box-shadow: 0 0 10px #aaa; }
+    .loader {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #3498db;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+      display: none;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h2>🖼️ تعديل الصور بالذكاء الاصطناعي</h2>
+
+  <!-- رفع صورة -->
+  <input type="file" id="fileInput" accept="image/*"><br><br>
+
+  <!-- معاينة الصورة -->
+  <div class="preview" id="preview"></div>
+
+  <!-- إدخال عدد الصور -->
+  <input type="number" id="num_images" min="1" max="10" value="1"><br><br>
+
+  <!-- إدخال وصف التعديل -->
+  <textarea id="prompt" rows="3" cols="40" placeholder="اكتب وصف التعديل..."></textarea><br><br>
+
+  <!-- زر تعديل -->
+  <button onclick="processImage()">🚀 تعديل الصورة</button>
+
+  <!-- دائرة تحميل -->
+  <div class="loader" id="loader"></div>
+
+  <!-- النتيجة -->
+  <div id="results"></div>
+
+  <script>
+    let uploadedUrl = "";
+
+    document.getElementById("fileInput").addEventListener("change", async function() {
+      let file = this.files[0];
+      if(file) {
+        let previewDiv = document.getElementById("preview");
+        let reader = new FileReader();
+        reader.onload = function(e) {
+          previewDiv.innerHTML = `<img src="${e.target.result}" alt="معاينة الصورة">`;
+        }
+        reader.readAsDataURL(file);
+
+        // رفع الصورة للسيرفر
+        let formData = new FormData();
+        formData.append("image", file);
+
+        let res = await fetch("/upload", {
+          method: "POST",
+          body: formData
+        });
+        let data = await res.json();
+        if(data.url) {
+          uploadedUrl = data.url;
+        } else {
+          alert("فشل رفع الصورة");
+        }
+      }
+    });
+
+    async function processImage() {
+      let prompt = document.getElementById("prompt").value;
+      let num_images = document.getElementById("num_images").value;
+      let loader = document.getElementById("loader");
+      let resultsDiv = document.getElementById("results");
+
+      if(!uploadedUrl || !prompt) {
+        alert("⚠️ من فضلك ارفع صورة واكتب الوصف.");
+        return;
+      }
+
+      resultsDiv.innerHTML = "";
+      loader.style.display = "block";
+
+      let response = await fetch("/process", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({image_url: uploadedUrl, prompt, num_images})
+      });
+
+      let data = await response.json();
+      loader.style.display = "none";
+
+      if(data.results && data.results.length > 0) {
+        data.results.forEach((url, idx) => {
+          resultsDiv.innerHTML += `<div><h3>✅ صورة ${idx+1}</h3><img src="${url}" alt="نتيجة"></div>`;
+        });
+      } else {
+        resultsDiv.innerHTML = "<p>⚠️ حصلت مشكلة في التعديل.</p>";
+      }
+    }
+  </script>
+</body>
+                                                                    </html>
+                                                                    
